@@ -1084,7 +1084,7 @@ function delDueRow(i) {
 function selectCardView(i) { /* reserved */ }
 
 function syncToSheets() {
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx0R4Nr-CfKrjIhr8rvalH4hikMj3IHqAf_iuXie-TFl9g7ASXW_thTUAeGBcWoZ-TSCQ/exec';
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxjogduStweJrk_QHBCN6FpN4FTP6xcXo6Ayz0vTqEXoCws5FXw4BQKRwt2xqsqKo0H/exec';
   if(!confirm('Sync ข้อมูลทั้งหมดขึ้น Google Sheets?')) return;
 
   const payload = {
@@ -1115,7 +1115,7 @@ function syncToSheets() {
 }
 
 function loadFromSheets() {
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx0R4Nr-CfKrjIhr8rvalH4hikMj3IHqAf_iuXie-TFl9g7ASXW_thTUAeGBcWoZ-TSCQ/exec';
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxjogduStweJrk_QHBCN6FpN4FTP6xcXo6Ayz0vTqEXoCws5FXw4BQKRwt2xqsqKo0H/exec';
 
   const indicator = document.getElementById('sync-indicator');
   if(indicator) { indicator.style.display='flex'; indicator.textContent='⏳ Loading from Sheets...'; }
