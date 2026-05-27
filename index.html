@@ -164,6 +164,24 @@
         <div class="field"><label>Date</label><input type="date" id="date"></div>
       </div>
       <button class="add-btn" onclick="addEntry()">Add Transaction</button>
+      <button class="add-btn" style="background:var(--blue); margin-top: 10px;" onclick="syncToSheets()">☁️ Sync to Google Sheets</button>
+
+      <script>
+      function syncToSheets() {
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxTRYf1CoO_gNOqyuj_-F_0HANJCs04MHRTx9GJQG6ZwaxWZ3UBQbSUuUIXdJIhWXR0Vw/exec';
+  
+        if(!confirm('Are you sure you want to sync all data to Google Sheets?')) return;
+  
+        fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors', // ป้องกันปัญหา CORS
+          cache: 'no-cache',
+          body: JSON.stringify(entries)
+        })
+        .then(() => alert('Sync success!'))
+        .catch(err => alert('Sync failed: ' + err));
+      }
+      </script>
     </div>
 
     <div class="panel" style="padding:0;overflow:hidden">
