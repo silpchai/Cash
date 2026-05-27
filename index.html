@@ -976,12 +976,17 @@ function renderDashTable(dashVal) {
   if (!tbody) return;
 
   customLabels['dash_spend_val'] = dashVal;
+
   const fixedRows = ['USE','Credit Card','Remained','Papa','Kohung'];
+  const extraKeys = ['extra1','extra2','extra3'];
 
   let sumBelow = 0;
   fixedRows.forEach(k => { sumBelow += parseFloat(customLabels['dash_amt_'+k]) || 0; });
-  dashDynamicRows.forEach(r => { sumBelow += parseFloat(r.amt) || 0; });
+  extraKeys.forEach(k => { sumBelow += parseFloat(customLabels['dash_amt_'+k]) || 0; });
+  // === นำบรรทัดนี้กลับมา เพื่อบวกยอดของ Dynamic Rows เข้าไปด้วย ===
+  dashDynamicRows.forEach(r => { sumBelow += parseFloat(r.amt) || 0; }); 
 
+  // คงเหลือ = dashVal - sumBelow
   const result = dashVal - sumBelow;
   const resColor = result >= 0 ? 'var(--green)' : 'var(--red)';
   const resText = (result >= 0 ? '+' : '−') + fmt(Math.abs(result));
@@ -1008,6 +1013,19 @@ function renderDashTable(dashVal) {
     </tr>`;
   });
 
+  extraKeys.forEach((k,i) => {
+    rows += `<tr>
+      <td style="padding:5px 8px;border-bottom:0.5px solid var(--border)">
+        <input type="text" value="${customLabels['dash_label_'+k]||''}" placeholder="รายการ ${i+1}"
+          style="width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:12px;background:var(--bg);color:var(--text)"
+          onchange="customLabels['dash_label_${k}']=this.value;saveCustom()">
+      </td>
+      <td ${tdNormal}>${inputCell(k)}</td>
+      <td ${tdNormal}>${remarkCell(k)}</td>
+    </tr>`;
+  });
+
+  // === นำโค้ดส่วนนี้กลับมา เพื่อให้แสดงรายการที่เพิ่มจากปุ่ม + Add Item ได้ ===
   dashDynamicRows.forEach((r, i) => {
     rows += `<tr>
       <td style="padding:5px 8px;border-bottom:0.5px solid var(--border)">
@@ -1030,16 +1048,17 @@ function renderDashTable(dashVal) {
       </td>
     </tr>`;
   });
+  // ===============================================================
 
+  // คงเหลือ row
   rows += `<tr style="border-top:1.5px solid var(--border)">
-    <td style="padding:7px 8px;font-weight:600;font-size:13px;color:var(--text2)">Remaining</td>
+    <td style="padding:7px 8px;font-weight:600;font-size:13px;color:var(--text2)">คงเหลือ</td>
     <td style="padding:7px 8px;text-align:right;font-weight:700;font-size:14px;color:${resColor}">${resText}</td>
     <td style="padding:7px 8px"></td>
   </tr>`;
 
   tbody.innerHTML = rows;
 }
-
 // ===== CREDIT CARD DUE DATE PANEL =====
 let dueRows = JSON.parse(localStorage.getItem('fin_due_rows') || '[]');
 
