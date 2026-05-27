@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>บันทึกรายรับ-รายจ่าย</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --green:#1D9E75;--green-light:#E1F5EE;--green-dark:#0F6E56;
+    --red:#D85A30;--red-light:#FAECE7;--red-dark:#993C1D;
+    --blue:#2563EB;--blue-light:#EFF6FF;--blue-dark:#1E40AF;
+    --purple:#7C3AED;--purple-light:#F5F3FF;--purple-dark:#5B21B6;
+    --bg:#F8F7F4;--surface:#FFFFFF;--border:#E5E3DC;
+    --text:#1A1A1A;--text2:#6B6B6B;--text3:#A0A0A0;
+    --radius:10px;--radius-sm:6px;
+  }
+  body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px}
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:1rem 1.5rem;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
+  header h1{font-size:18px;font-weight:600}
+  header span{font-size:13px;color:var(--text2);margin-left:auto}
+  .container{max-width:780px;margin:0 auto;padding:1.25rem 1rem 3rem}
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.25rem}
+  @media(max-width:500px){.cards{grid-template-columns:1fr 1fr;}.card:last-child{grid-column:1/-1}}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.875rem 1rem}
+  .card-label{font-size:11px;color:var(--text2);margin-bottom:5px;letter-spacing:.04em}
+  .card-val{font-size:20px;font-weight:600}
+  .tabs{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:4px;gap:4px;margin-bottom:1.25rem;flex-wrap:wrap}
+  .tab{flex:1;min-width:80px;padding:8px 6px;border:none;background:transparent;border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;font-size:13px;color:var(--text2);transition:.15s;white-space:nowrap}
+  .tab.active{background:var(--bg);color:var(--text);font-weight:500}
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1rem}
+  .panel-title{font-size:13px;font-weight:500;color:var(--text2);margin-bottom:1rem;text-transform:uppercase;letter-spacing:.05em}
+  .type-row{display:flex;gap:8px;margin-bottom:1rem}
+  .type-btn{flex:1;padding:9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;cursor:pointer;font-family:inherit;font-size:14px;color:var(--text2);transition:.15s}
+  .type-btn.active-in{background:var(--green-light);color:var(--green-dark);border-color:var(--green)}
+  .type-btn.active-out{background:var(--red-light);color:var(--red-dark);border-color:var(--red)}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem}
+  @media(max-width:500px){.form-grid{grid-template-columns:1fr}}
+  .field label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px}
+  .field input,.field select{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:14px;color:var(--text);background:var(--bg);outline:none;transition:.15s}
+  .field input:focus,.field select:focus{border-color:#888;background:#fff}
+  .add-btn{width:100%;padding:11px;border:none;border-radius:var(--radius-sm);background:var(--text);color:#fff;font-family:inherit;font-size:15px;font-weight:500;cursor:pointer;transition:.15s}
+  .add-btn:hover{opacity:.85}
+  .add-btn.blue{background:var(--blue)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{text-align:left;padding:8px 10px;font-size:11px;color:var(--text2);letter-spacing:.04em;border-bottom:1px solid var(--border)}
+  td{padding:10px;border-bottom:1px solid var(--border);color:var(--text)}
+  tr:last-child td{border-bottom:none}
+  .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:500}
+  .badge-in{background:var(--green-light);color:var(--green-dark)}
+  .badge-out{background:var(--red-light);color:var(--red-dark)}
+  .badge-cc{background:var(--blue-light);color:var(--blue-dark)}
+  .badge-unpaid{background:#FEF9C3;color:#854D0E}
+  .badge-paid{background:var(--green-light);color:var(--green-dark)}
+  .del-btn{background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px;padding:2px 6px;border-radius:4px;line-height:1}
+  .del-btn:hover{color:var(--red);background:var(--red-light)}
+  .empty{text-align:center;padding:2.5rem;color:var(--text3);font-size:14px}
+  .chart-wrap{position:relative;width:100%;height:220px;margin:1.25rem 0 .5rem}
+  .legend{display:flex;gap:16px;font-size:12px;color:var(--text2);margin-bottom:1rem;flex-wrap:wrap}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+  .month-table td:first-child{font-weight:500}
+  .balance-pos{color:var(--green);font-weight:600}
+  .balance-neg{color:var(--red);font-weight:600}
+  .record-layout{display:flex;gap:12px;align-items:flex-start}
+  .record-main{flex:1;min-width:0}
+  .side-panel{width:380px;flex-shrink:0;transition:.3s}
+  .side-panel.collapsed{width:36px;overflow:hidden}
+  @media(max-width:900px){.record-layout{flex-direction:column}.side-panel{width:100%}.side-panel.collapsed{width:100%;height:36px;overflow:hidden}}
+  .side-toggle{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;cursor:pointer;font-family:inherit;font-size:13px;color:var(--text2);width:100%;margin-bottom:8px;white-space:nowrap;overflow:hidden}
+  .side-toggle .arrow{transition:.3s;flex-shrink:0}
+  .side-panel.collapsed .side-toggle .arrow{transform:rotate(180deg)}
+  .side-panel.collapsed .side-toggle-label{display:none}
+  .custom-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;overflow-x:auto}
+  .custom-table-wrap table{min-width:300px}
+  .custom-table-wrap th{font-size:11px;padding:6px 8px;white-space:nowrap}
+  .custom-table-wrap td{padding:5px 8px;font-size:13px}
+  .custom-table-wrap td input[type="text"],.custom-table-wrap td input[type="number"]{width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:12px;background:var(--bg);color:var(--text);outline:none}
+  .custom-table-wrap td input:focus{border-color:var(--blue);background:#fff}
+  .custom-tfoot td{font-weight:600;border-top:1.5px solid var(--border);font-size:13px;padding:7px 8px}
+
+  .cc-cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:1.25rem}
+  .cc-card-visual{border-radius:12px;padding:1.25rem;color:#fff;position:relative;overflow:hidden;min-height:120px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;transition:.15s;border:2px solid transparent}
+  .cc-card-visual:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.15)}
+  .cc-card-visual.selected{border-color:#fff;box-shadow:0 0 0 3px var(--blue)}
+  .cc-card-name{font-size:15px;font-weight:600}
+  .cc-card-limit{font-size:12px;opacity:.8;margin-top:4px}
+  .cc-card-used{font-size:22px;font-weight:600;margin-top:auto}
+  .cc-card-due{font-size:11px;opacity:.75}
+  .cc-bar{height:4px;background:rgba(255,255,255,.3);border-radius:2px;margin-top:8px}
+  .cc-bar-fill{height:100%;border-radius:2px;background:#fff;transition:.3s}
+  .cc-summary-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1rem}
+  @media(max-width:500px){.cc-summary-cards{grid-template-columns:1fr 1fr}.cc-summary-cards .card:last-child{grid-column:1/-1}}
+  .pay-btn{padding:6px 14px;border:1px solid var(--green);border-radius:var(--radius-sm);background:transparent;color:var(--green-dark);font-family:inherit;font-size:12px;cursor:pointer;transition:.15s}
+  .pay-btn:hover{background:var(--green-light)}
+  .pay-btn.paid-btn{border-color:var(--border);color:var(--text3)}
+  .add-card-btn{padding:10px;border:2px dashed var(--border);border-radius:var(--radius);background:transparent;cursor:pointer;font-family:inherit;font-size:14px;color:var(--text2);width:100%;transition:.15s}
+  .add-card-btn:hover{border-color:#888;color:var(--text)}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;display:flex;align-items:center;justify-content:center;padding:1rem}
+  .modal{background:var(--surface);border-radius:var(--radius);padding:1.5rem;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+  .modal h3{font-size:16px;font-weight:600;margin-bottom:1rem}
+  .modal .form-grid{margin-bottom:1rem}
+  .modal-btns{display:flex;gap:8px}
+  .modal-btns button{flex:1;padding:10px;border-radius:var(--radius-sm);font-family:inherit;font-size:14px;cursor:pointer;border:1px solid var(--border)}
+  .modal-btns .confirm-btn{background:var(--text);color:#fff;border-color:var(--text)}
+  .color-picker{display:flex;gap:8px;flex-wrap:wrap}
+  .color-opt{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:.15s}
+  .color-opt.sel{border-color:#fff;box-shadow:0 0 0 2px var(--text)}
+</style>
+</head>
+<body>
+<header>
+  <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h10M7 12h6"/></svg>
+  <h1>Finance Tracker</h1>
+  <span id="header-date"></span>
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('record')">📝 Record</button>
+    <button class="tab" onclick="switchTab('credit')">💳 Credit Card</button>
+    <button class="tab" onclick="switchTab('summary')">📊 Summary</button>
+  </div>
+
+  <div id="tab-record">
+    <div class="panel">
+      <div class="panel-title" style="font-size:15px;color:var(--text);font-weight:600;letter-spacing:0">🏦 SCB EZ Saving</div>
+      <div style="overflow-x:auto">
+        <table id="scb-summary-table" style="min-width:520px">
+          <thead>
+            <tr style="background:var(--bg)">
+              <th style="text-align:right;white-space:nowrap;color:var(--text);font-size:12px">111-531851-8</th>
+              <th style="text-align:right;white-space:nowrap;color:#7C3AED;font-size:12px">USE</th>
+              <th style="text-align:right;white-space:nowrap;color:var(--blue-dark);font-size:12px">REMAINED</th>
+              <th style="text-align:right;white-space:nowrap;color:var(--red-dark);font-size:12px">CREDIT CARD</th>
+              <th style="text-align:right;white-space:nowrap;color:#854D0E;font-size:12px">SPEND</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="text-align:right;font-weight:600;font-size:16px" id="scb-net">฿0.00</td>
+              <td style="text-align:right;font-weight:600;color:#7C3AED" id="scb-use">฿0.00</td>
+              <td style="text-align:right;font-weight:600;color:var(--blue)" id="scb-remained">฿0.00</td>
+              <td style="text-align:right;font-weight:600;color:var(--red)" id="scb-cc">฿0.00</td>
+              <td style="text-align:right;font-weight:600;color:#D97706" id="scb-spend">฿0.00</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Add Transaction</div>
+      <div class="type-row">
+        <button class="type-btn active-out" id="btn-out" onclick="setType('out')">− OUTGOING</button>
+        <button class="type-btn" id="btn-in" onclick="setType('in')">+ INCOMING</button>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>Category</label><select id="cat"></select></div>
+        <div class="field"><label>Description</label><input type="text" id="desc" placeholder="e.g. Lunch, Taxi"></div>
+        <div class="field"><label>Amount (฿)</label><input type="number" id="amount" placeholder="0.00" min="0" inputmode="decimal" step="0.01"></div>
+        <div class="field"><label>Date</label><input type="date" id="date"></div>
+      </div>
+      <button class="add-btn" onclick="addEntry()">Add Transaction</button>
+    </div>
+
+    <div class="panel" style="padding:0;overflow:hidden">
+      <button class="side-toggle" onclick="toggleSidePanel()" style="border-radius:var(--radius);border:none;margin:0;padding:1rem 1.25rem">
+        <span class="arrow" id="spend-arrow">▼</span>
+        <span class="side-toggle-label" style="font-size:14px;font-weight:600;color:var(--text)">💰 SPEND</span>
+      </button>
+      <div id="side-panel-body" style="padding:0 1.25rem 1.25rem">
+        <div style="overflow-x:auto">
+          <table id="custom-table" style="min-width:360px">
+            <thead>
+              <tr style="background:var(--bg)">
+                <th style="color:var(--text)">Item</th>
+                <th style="text-align:right;color:#D97706;white-space:nowrap">Total</th>
+                <th style="text-align:right;color:var(--blue-dark)">Remark</th>
+              </tr>
+            </thead>
+            <tbody id="custom-tbody"></tbody>
+            <tfoot>
+              <tr class="custom-tfoot">
+                <td style="color:var(--text2)">Total SPEND</td>
+                <td style="text-align:right" id="custom-total">฿0</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <button onclick="addSpendRow()" style="margin-top:10px;padding:7px 16px;border:1.5px dashed var(--border);border-radius:var(--radius-sm);background:transparent;font-family:inherit;font-size:13px;color:var(--text2);cursor:pointer;width:100%">+ Add Item</button>
+      </div>
+    </div>
+
+    <div class="panel" style="padding:0;overflow:hidden">
+      <button class="side-toggle" onclick="toggleDashPanel()" style="border-radius:var(--radius);border:none;margin:0;padding:1rem 1.25rem">
+        <span class="arrow" id="dash-arrow">▼</span>
+        <span class="side-toggle-label" style="font-size:14px;font-weight:600;color:var(--text)">-</span>
+      </button>
+      <div id="dash-panel-body" style="padding:0 1.25rem 1.25rem">
+        <div style="overflow-x:auto">
+          <table style="min-width:360px">
+            <thead>
+              <tr style="background:var(--bg)">
+                <th style="color:var(--text)">Item</th>
+                <th style="text-align:right;color:#D97706;white-space:nowrap">Total</th>
+                <th style="text-align:right;color:var(--blue-dark)">Remark</th>
+              </tr>
+            </thead>
+            <tbody id="dash-tbody"></tbody>
+          </table>
+        </div>
+        <button onclick="addDashRow()" style="margin-top:10px;padding:7px 16px;border:1.5px dashed var(--border);border-radius:var(--radius-sm);background:transparent;font-family:inherit;font-size:13px;color:var(--text2);cursor:pointer;width:100%">+ Add Item</button>
+      </div>
+    </div>
+
+    <div class="panel" style="padding:0;overflow:hidden">
+      <button class="side-toggle" onclick="toggleDuePanel()" style="border-radius:var(--radius);border:none;margin:0;padding:1rem 1.25rem">
+        <span class="arrow" id="due-arrow">▼</span>
+        <span class="side-toggle-label" style="font-size:14px;font-weight:600;color:var(--text)">💳 Credit Card Payment Due Date</span>
+      </button>
+      <div id="due-panel-body" style="padding:0 1.25rem 1.25rem">
+        <div style="overflow-x:auto">
+          <table style="min-width:380px">
+            <thead>
+              <tr style="background:var(--bg)">
+                <th style="color:var(--text);white-space:nowrap">Due Date</th>
+                <th style="color:var(--text);white-space:nowrap">Credit Card</th>
+                <th style="text-align:right;color:var(--text);white-space:nowrap">Amount (฿)</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="due-tbody"></tbody>
+          </table>
+        </div>
+        <button onclick="addDueRow()" style="margin-top:10px;padding:7px 16px;border:1.5px dashed var(--border);border-radius:var(--radius-sm);background:transparent;font-family:inherit;font-size:13px;color:var(--text2);cursor:pointer;width:100%">+ Add Item</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">All Transactions</div>
+      
+      <div style="background:var(--bg); padding:12px; border-radius:var(--radius-sm); margin-bottom:12px; border:1px solid var(--border);">
+        <div style="font-size:12px; font-weight:600; color:var(--text2); margin-bottom:8px;">Filters</div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:8px;">
+          <input type="date" id="filter-date" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:4px; font-family:inherit; font-size:13px;" onchange="render()" title="Filter by specific date">
+          <input type="month" id="filter-month" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:4px; font-family:inherit; font-size:13px;" onchange="render()" title="Filter by month">
+          <select id="filter-cat" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:4px; font-family:inherit; font-size:13px; background:#fff;" onchange="render()">
+            <option value="">All Categories</option>
+          </select>
+          <input type="text" id="search-entries" placeholder="🔍 Search description..." style="width:100%; padding:8px; border:1px solid var(--border); border-radius:4px; font-family:inherit; font-size:13px; outline:none;" oninput="render()">
+        </div>
+        <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+          <button onclick="clearFilters()" style="background:none; border:none; color:var(--text3); font-size:12px; text-decoration:underline; cursor:pointer;">Clear all filters</button>
+        </div>
+      </div>
+
+      <div id="empty-msg" class="empty">No transactions found</div>
+      <table id="entries-table" style="display:none">
+        <thead><tr><th>Date</th><th>Category</th><th>Description</th><th style="text-align:right">Amount</th><th></th></tr></thead>
+        <tbody id="entries-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="tab-credit" style="display:none">
+    <div class="panel">
+      <div class="panel-title">บัตรของฉัน</div>
+      <div class="cc-cards-grid" id="cc-cards-grid"></div>
+      <button class="add-card-btn" onclick="openAddCard()">+ เพิ่มบัตรใหม่</button>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">สรุปยอดบัตรเครดิต</div>
+      <div class="cc-summary-cards">
+        <div class="card"><div class="card-label">ยอดค้างชำระทั้งหมด</div><div class="card-val" id="cc-total-used" style="color:var(--blue)">฿0</div></div>
+        <div class="card"><div class="card-label">ชำระแล้วเดือนนี้</div><div class="card-val" id="cc-total-paid" style="color:var(--green)">฿0</div></div>
+        <div class="card"><div class="card-label">วงเงินคงเหลือรวม</div><div class="card-val" id="cc-total-avail" style="color:var(--text)">฿0</div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">รายการใช้บัตรเครดิต</div>
+      <div class="form-grid">
+        <div class="field"><label>บัตร</label><select id="cc-select-card"></select></div>
+        <div class="field"><label>หมวดหมู่</label><select id="cc-cat">
+          <option>อาหาร</option><option>ช้อปปิ้ง</option><option>ค่าเดินทาง</option>
+          <option>สุขภาพ</option><option>บันเทิง</option><option>สาธารณูปโภค</option><option>อื่นๆ</option>
+        </select></div>
+        <div class="field"><label>รายการ</label><input type="text" id="cc-desc" placeholder="เช่น ซื้อของ Lazada"></div>
+        <div class="field"><label>จำนวนเงิน (฿)</label><input type="number" id="cc-amount" placeholder="0" min="0" inputmode="decimal"></div>
+        <div class="field"><label>วันที่ใช้บัตร</label><input type="date" id="cc-date"></div>
+        <div class="field"><label>รอบบิล</label><input type="month" id="cc-billing"></div>
+      </div>
+      <button class="add-btn blue" onclick="addCCEntry()">+ บันทึกรายการบัตรเครดิต</button>
+      <div style="height:1rem"></div>
+      <div id="cc-empty-msg" class="empty">ยังไม่มีรายการ — เพิ่มบัตรแล้วเริ่มบันทึกได้เลย</div>
+      <table id="cc-entries-table" style="display:none">
+        <thead><tr><th>วันที่</th><th>บัตร</th><th>หมวดหมู่</th><th>รายการ</th><th style="text-align:right">จำนวน</th><th>สถานะ</th><th></th></tr></thead>
+        <tbody id="cc-entries-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="tab-summary" style="display:none">
+    <div class="panel">
+      <div class="panel-title">สรุปรายเดือน</div>
+      <div id="month-summary-wrap"><div class="empty">ยังไม่มีข้อมูล</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">กราฟรายรับ-รายจ่าย</div>
+      <div class="legend">
+        <span><span class="dot" style="background:var(--green)"></span>รายรับ</span>
+        <span><span class="dot" style="background:var(--red)"></span>รายจ่าย</span>
+        <span><span class="dot" style="background:var(--blue)"></span>บัตรเครดิต</span>
+      </div>
+      <div class="chart-wrap"><canvas id="monthChart"></canvas></div>
+      <div id="chart-empty" class="empty" style="display:none">ยังไม่มีข้อมูล</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">สรุปตามหมวดหมู่</div>
+      <div id="cat-summary-wrap"><div class="empty">ยังไม่มีข้อมูล</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="card-modal" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h3 id="modal-title">เพิ่มบัตรใหม่</h3>
+    <div class="form-grid">
+      <div class="field" style="grid-column:1/-1"><label>ชื่อบัตร / ธนาคาร</label><input type="text" id="m-name" placeholder="เช่น KBank Visa, SCB Platinum"></div>
+      <div class="field"><label>วงเงิน (฿)</label><input type="number" id="m-limit" placeholder="50000" min="0"></div>
+      <div class="field"><label>วันครบกำหนดชำระ</label><input type="number" id="m-due" placeholder="25" min="1" max="31"></div>
+    </div>
+    <div class="field" style="margin-bottom:1rem">
+      <label style="margin-bottom:8px;display:block">สีบัตร</label>
+      <div class="color-picker" id="color-picker"></div>
+    </div>
+    <div class="modal-btns">
+      <button onclick="closeModal()">ยกเลิก</button>
+      <button class="confirm-btn" onclick="saveCard()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CAT = {
+  in: ['-','USE','REMAINED','CREDIT CARD','INSURANCE','VEHICLE INSURANCE','CAR MAINTENANCE','CONDO/HOME','OTHER+TRAVEL','ORYU','GUK','GUK for ORYU','INVESTMENT','RMF','แต๊ะเอีย'],
+  out: ['-','USE','REMAINED','CREDIT CARD','INSURANCE','VEHICLE INSURANCE','CAR MAINTENANCE','CONDO/HOME','OTHER+TRAVEL','ORYU','GUK','GUK for ORYU','INVESTMENT','RMF','แต๊ะเอีย']
+};
+const CC_COLORS = [
+  'linear-gradient(135deg,#2563EB,#7C3AED)',
+  'linear-gradient(135deg,#059669,#0891B2)',
+  'linear-gradient(135deg,#DC2626,#DB2777)',
+  'linear-gradient(135deg,#D97706,#EA580C)',
+  'linear-gradient(135deg,#374151,#111827)',
+  'linear-gradient(135deg,#7C3AED,#4F46E5)',
+];
+// เปลี่ยนค่าเริ่มต้นเป็น 'out' (รายจ่าย)
+let currentType = 'out';
+let entries = JSON.parse(localStorage.getItem('fin_entries_v2') || '[]');
+let ccCards = JSON.parse(localStorage.getItem('fin_cc_cards') || '[]');
+let ccEntries = JSON.parse(localStorage.getItem('fin_cc_entries') || '[]');
+let chart = null;
+let editCardIdx = -1;
+let selectedColor = CC_COLORS[0];
+
+const today = new Date().toISOString().slice(0,10);
+const thisMonth = today.slice(0,7);
+document.getElementById('date').value = today;
+document.getElementById('cc-date').value = today;
+document.getElementById('cc-billing').value = thisMonth;
+
+// Format header date in English
+document.getElementById('header-date').textContent = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+
+function buildColorPicker() {
+  const cp = document.getElementById('color-picker');
+  cp.innerHTML = CC_COLORS.map((c,i) => `<div class="color-opt${c===selectedColor?' sel':''}" style="background:${c}" onclick="selectColor(${i})" title="Color ${i+1}"></div>`).join('');
+}
+function selectColor(i) { selectedColor = CC_COLORS[i]; buildColorPicker(); }
+buildColorPicker();
+
+function setType(t) {
+  currentType = t;
+  document.getElementById('btn-in').className = 'type-btn' + (t==='in'?' active-in':'');
+  document.getElementById('btn-out').className = 'type-btn' + (t==='out'?' active-out':'');
+  updateCat();
+}
+function updateCat() {
+  const sel = document.getElementById('cat');
+  sel.innerHTML = CAT[currentType].map(c=>`<option>${c}</option>`).join('');
+}
+setType(currentType);
+
+function initFilters() {
+  const sel = document.getElementById('filter-cat');
+  if(sel) {
+    const allCats = [...new Set([...CAT.in, ...CAT.out])].sort();
+    sel.innerHTML = '<option value="">All Categories</option>' + allCats.map(c => `<option value="${c}">${c}</option>`).join('');
+  }
+}
+function clearFilters() {
+  document.getElementById('filter-date').value = '';
+  document.getElementById('filter-month').value = '';
+  document.getElementById('filter-cat').value = '';
+  document.getElementById('search-entries').value = '';
+  render();
+}
+
+function save() {
+  localStorage.setItem('fin_entries_v2', JSON.stringify(entries));
+  localStorage.setItem('fin_cc_cards', JSON.stringify(ccCards));
+  localStorage.setItem('fin_cc_entries', JSON.stringify(ccEntries));
+}
+function fmt(n) { return '฿' + Number(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+// ฟังก์ชันสำหรับแปลงวันที่ให้อยู่ในรูปแบบ DD-MMM-YY
+function formatShortDate(dateStr) {
+  if(!dateStr) return '';
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const [y, m, d] = dateStr.split('-');
+  return `${d}-${months[parseInt(m) - 1]}-${y.slice(-2)}`;
+}
+
+function render() {
+  let totalIn=0, totalOut=0;
+  let scbUse=0, scbRemained=0, scbCC=0, scbSpend=0;
+  
+  entries.forEach(e => {
+    if(e.type==='in') {
+      totalIn += Number(e.amount);
+      if(e.cat==='USE') scbUse += Number(e.amount);
+      else if(e.cat==='REMAINED') scbRemained += Number(e.amount);
+      else if(e.cat==='CREDIT CARD') scbCC += Number(e.amount);
+      else if(e.cat==='SPEND') scbSpend += Number(e.amount);
+    } else {
+      totalOut += Number(e.amount);
+      if(e.cat==='USE') scbUse -= Number(e.amount);
+      else if(e.cat==='REMAINED') scbRemained -= Number(e.amount);
+      else if(e.cat==='CREDIT CARD') scbCC -= Number(e.amount);
+      else if(e.cat==='SPEND') scbSpend -= Number(e.amount);
+    }
+  });
+
+  const filterDate = document.getElementById('filter-date')?.value || '';
+  const filterMonth = document.getElementById('filter-month')?.value || '';
+  const filterCat = document.getElementById('filter-cat')?.value || '';
+  const searchTerm = (document.getElementById('search-entries')?.value || '').toLowerCase();
+
+  const body = document.getElementById('entries-body');
+  body.innerHTML = '';
+  const sorted = [...entries].map((e,i)=>({...e,_origIdx:i})).sort((a,b) => b.date.localeCompare(a.date));
+  
+  let visibleCount = 0;
+  sorted.forEach(e => {
+    if (filterDate && e.date !== filterDate) return;
+    if (filterMonth && !e.date.startsWith(filterMonth)) return;
+    if (filterCat && e.cat !== filterCat) return;
+    if (searchTerm) {
+      const matchDesc = (e.desc||'').toLowerCase().includes(searchTerm);
+      if (!matchDesc) return;
+    }
+    
+    visibleCount++;
+    const idx = e._origIdx;
+    
+    // แปลงวันที่สำหรับแสดงผลเป็น DD-MMM-YY
+    const displayDate = formatShortDate(e.date);
+
+    const color = e.type==='in' ? 'var(--green)' : 'var(--red)';
+    const catOptions = CAT[e.type].map(c => `<option${c===e.cat?' selected':''}>${c}</option>`).join('');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>
+        <div id="date-display-${idx}" style="cursor:pointer;white-space:nowrap" onclick="startEditDate(${idx})" title="Click to edit">${displayDate}</div>
+        <div id="date-edit-${idx}" style="display:none;gap:4px;align-items:center">
+          <input type="date" id="date-input-${idx}" value="${e.date}"
+            style="padding:4px 6px;border:1px solid var(--blue);border-radius:var(--radius-sm);font-family:inherit;font-size:12px;background:#fff"
+            onkeydown="if(event.key==='Enter')saveDateEdit(${idx});if(event.key==='Escape')cancelDateEdit(${idx})">
+          <button onclick="saveDateEdit(${idx})" style="padding:4px 8px;border:none;border-radius:var(--radius-sm);background:var(--green);color:#fff;font-size:12px;cursor:pointer">✓</button>
+          <button onclick="cancelDateEdit(${idx})" style="padding:4px 8px;border:none;border-radius:var(--radius-sm);background:var(--border);color:var(--text2);font-size:12px;cursor:pointer">✕</button>
+        </div>
+      </td>
+      <td>
+        <div id="cat-display-${idx}" style="cursor:pointer" onclick="startEditCat(${idx})" title="Click to edit">
+          <span class="badge ${e.type==='in'?'badge-in':'badge-out'}">${e.cat}</span>
+        </div>
+        <div id="cat-edit-${idx}" style="display:none">
+          <select id="cat-input-${idx}" style="padding:4px 6px;border:1px solid var(--blue);border-radius:var(--radius-sm);font-family:inherit;font-size:12px;background:#fff"
+            onchange="saveCatEdit(${idx})">${catOptions}</select>
+        </div>
+      </td>
+      <td>
+        <div id="desc-display-${idx}" style="color:var(--text2);cursor:pointer" onclick="startEditDesc(${idx})" title="Click to edit">${e.desc||'—'}</div>
+        <div id="desc-edit-${idx}" style="display:none;gap:4px;align-items:center;flex-wrap:nowrap">
+          <input type="text" id="desc-input-${idx}" value="${e.desc||''}" placeholder="Description"
+            style="width:100%;padding:4px 8px;border:1px solid var(--blue);border-radius:var(--radius-sm);font-family:inherit;font-size:13px"
+            onkeydown="if(event.key==='Enter')saveDescEdit(${idx});if(event.key==='Escape')cancelDescEdit(${idx})">
+          <button onclick="saveDescEdit(${idx})" style="padding:4px 8px;border:none;border-radius:var(--radius-sm);background:var(--green);color:#fff;font-size:12px;cursor:pointer;white-space:nowrap">✓</button>
+          <button onclick="cancelDescEdit(${idx})" style="padding:4px 8px;border:none;border-radius:var(--radius-sm);background:var(--border);color:var(--text2);font-size:12px;cursor:pointer">✕</button>
+        </div>
+      </td>
+      <td style="text-align:right">
+        <div class="amount-cell" id="amt-display-${idx}" style="font-weight:600;color:${color};cursor:pointer" onclick="startEdit(${idx})" title="Click to edit">
+          ${e.type==='in'?'+':'−'}${fmt(e.amount)}
+        </div>
+        <div class="amount-edit" id="amt-edit-${idx}" style="display:none;justify-content:flex-end;gap:4px">
+          <input type="number" id="amt-input-${idx}" value="${e.amount}" min="0" inputmode="decimal"
+            style="width:90px;padding:4px 8px;border:1px solid var(--blue);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;text-align:right"
+            onkeydown="if(event.key==='Enter')saveEdit(${idx});if(event.key==='Escape')cancelEdit(${idx})">
+          <button onclick="saveEdit(${idx})" style="padding:4px 8px;border:none;border-radius:var(--radius-sm);background:var(--green);color:#fff;font-size:12px;cursor:pointer">✓</button>
+          <button onclick="cancelEdit(${idx})" style="padding:4px 8px;border:none;border-radius:var(--radius-sm);background:var(--border);color:var(--text2);font-size:12px;cursor:pointer">✕</button>
+        </div>
+      </td>
+      <td><button class="del-btn" onclick="del(${idx})" aria-label="Delete">×</button></td>`;
+    body.appendChild(tr);
+  });
+  
+  document.getElementById('empty-msg').style.display = visibleCount ? 'none' : 'block';
+  document.getElementById('entries-table').style.display = visibleCount ? 'table' : 'none';
+
+  const scbTotal = scbUse + scbRemained + scbCC + scbSpend;
+  const scbNetEl = document.getElementById('scb-net');
+  scbNetEl.textContent = (scbTotal >= 0 ? '+' : '−') + fmt(Math.abs(scbTotal));
+  scbNetEl.style.color = scbTotal >= 0 ? 'var(--green)' : 'var(--red)';
+
+  function setScbCell(id, val, posColor, negColor) {
+    const el = document.getElementById(id);
+    el.textContent = (val >= 0 ? '' : '−') + fmt(Math.abs(val));
+    el.style.color = val >= 0 ? posColor : negColor;
+  }
+  setScbCell('scb-use', scbUse, '#7C3AED', 'var(--red)');
+  setScbCell('scb-remained', scbRemained, 'var(--blue)', 'var(--red)');
+  setScbCell('scb-cc', scbCC, 'var(--red)', 'var(--green)');
+  if (typeof renderCustomTable === 'function') renderCustomTable();
+}
+
+function addEntry() {
+  const amount = parseFloat(document.getElementById('amount').value);
+  const desc = document.getElementById('desc').value.trim();
+  const date = document.getElementById('date').value;
+  if (!amount || amount <= 0) { alert('Please enter a valid amount.'); return; }
+  if (!date) { alert('Please enter date.'); return; }
+  entries.push({ type: currentType, cat: document.getElementById('cat').value, desc, amount, date });
+  save(); render();
+  document.getElementById('amount').value = '';
+  document.getElementById('desc').value = '';
+}
+
+function del(i) { if (confirm('Delete this transaction?')) { entries.splice(i, 1); save(); render(); } }
+
+function startEditCat(i) {
+  document.getElementById('cat-display-'+i).style.display = 'none';
+  document.getElementById('cat-edit-'+i).style.display = 'block';
+}
+function saveCatEdit(i) {
+  entries[i].cat = document.getElementById('cat-input-'+i).value;
+  save(); render();
+}
+
+function startEditDesc(i) {
+  document.getElementById('desc-display-'+i).style.display = 'none';
+  const editDiv = document.getElementById('desc-edit-'+i);
+  editDiv.style.display = 'flex';
+  const input = document.getElementById('desc-input-'+i);
+  input.focus(); input.select();
+}
+function saveDescEdit(i) {
+  entries[i].desc = document.getElementById('desc-input-'+i).value.trim();
+  save(); render();
+}
+function cancelDescEdit(i) {
+  document.getElementById('desc-edit-'+i).style.display = 'none';
+  document.getElementById('desc-display-'+i).style.display = 'block';
+}
+
+function startEditDate(i) {
+  document.getElementById('date-display-'+i).style.display = 'none';
+  const el = document.getElementById('date-edit-'+i);
+  el.style.display = 'flex';
+  document.getElementById('date-input-'+i).focus();
+}
+function saveDateEdit(i) {
+  const val = document.getElementById('date-input-'+i).value;
+  if (!val) { cancelDateEdit(i); return; }
+  entries[i].date = val; save(); render();
+}
+function cancelDateEdit(i) {
+  document.getElementById('date-edit-'+i).style.display = 'none';
+  document.getElementById('date-display-'+i).style.display = 'block';
+}
+
+function startEdit(i) {
+  document.getElementById('amt-display-'+i).style.display = 'none';
+  const editDiv = document.getElementById('amt-edit-'+i);
+  editDiv.style.display = 'flex';
+  const input = document.getElementById('amt-input-'+i);
+  input.focus(); input.select();
+}
+function saveEdit(i) {
+  const val = parseFloat(document.getElementById('amt-input-'+i).value);
+  if (!val || val <= 0) { alert('Please enter a valid amount.'); return; }
+  entries[i].amount = val;
+  save(); render();
+}
+function cancelEdit(i) {
+  document.getElementById('amt-edit-'+i).style.display = 'none';
+  document.getElementById('amt-display-'+i).style.display = 'block';
+}
+
+// ===== CREDIT CARD =====
+function renderCCCards() {
+  const grid = document.getElementById('cc-cards-grid');
+  const sel = document.getElementById('cc-select-card');
+
+  sel.innerHTML = ccCards.length ? ccCards.map((c,i)=>`<option value="${i}">${c.name}</option>`).join('') : '<option value="">— No cards available —</option>';
+
+  if (!ccCards.length) { grid.innerHTML = ''; renderCCSummary(); return; }
+
+  grid.innerHTML = ccCards.map((c,i) => {
+    const used = ccEntries.filter(e=>e.cardIdx===i&&!e.paid).reduce((s,e)=>s+Number(e.amount),0);
+    const pct = c.limit ? Math.min(100, Math.round(used/c.limit*100)) : 0;
+    return `<div class="cc-card-visual" style="background:${c.color}" onclick="selectCardView(${i})">
+      <div>
+        <div class="cc-card-name">${c.name}</div>
+        <div class="cc-card-limit">วงเงิน ${fmt(c.limit)}</div>
+      </div>
+      <div>
+        <div class="cc-card-used">${fmt(used)}</div>
+        <div class="cc-card-due">ครบกำหนดชำระวันที่ ${c.due} ของเดือน</div>
+        <div class="cc-bar"><div class="cc-bar-fill" style="width:${pct}%"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  renderCCSummary();
+  renderCCEntries();
+  if (typeof renderDueTable === 'function') renderDueTable();
+}
+
+function renderCCSummary() {
+  let totalUsed=0, totalPaid=0, totalAvail=0;
+  ccCards.forEach((c,i) => {
+    const used = ccEntries.filter(e=>e.cardIdx===i&&!e.paid).reduce((s,e)=>s+Number(e.amount),0);
+    const paid = ccEntries.filter(e=>e.cardIdx===i&&e.paid).reduce((s,e)=>s+Number(e.amount),0);
+    totalUsed += used;
+    totalPaid += paid;
+    totalAvail += Math.max(0, (c.limit||0) - used);
+  });
+  document.getElementById('cc-total-used').textContent = fmt(totalUsed);
+  document.getElementById('cc-total-paid').textContent = fmt(totalPaid);
+  document.getElementById('cc-total-avail').textContent = fmt(totalAvail);
+}
+
+function renderCCEntries() {
+  const body = document.getElementById('cc-entries-body');
+  body.innerHTML = '';
+  const sorted = [...ccEntries].sort((a,b) => b.date.localeCompare(a.date));
+  sorted.forEach(e => {
+    const idx = ccEntries.indexOf(e);
+    const card = ccCards[e.cardIdx];
+    const cardName = card ? card.name : '(ลบแล้ว)';
+    
+    // แปลงวันที่สำหรับตารางบัตรเครดิตเช่นกัน
+    const displayDate = formatShortDate(e.date);
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${displayDate}</td>
+      <td><span class="badge badge-cc">${cardName}</span></td>
+      <td><span class="badge badge-out">${e.cat}</span></td>
+      <td style="color:var(--text2)">${e.desc||'—'}</td>
+      <td style="text-align:right;font-weight:600;color:var(--blue)">−${fmt(e.amount)}</td>
+      <td><span class="badge ${e.paid?'badge-paid':'badge-unpaid'}">${e.paid?'ชำระแล้ว':'ค้างชำระ'}</span></td>
+      <td style="display:flex;gap:4px;align-items:center">
+        ${!e.paid?`<button class="pay-btn" onclick="markPaid(${idx})">✓ ชำระ</button>`:`<button class="pay-btn paid-btn" onclick="unmarkPaid(${idx})">ยกเลิก</button>`}
+        <button class="del-btn" onclick="delCC(${idx})">×</button>
+      </td>`;
+    body.appendChild(tr);
+  });
+  document.getElementById('cc-empty-msg').style.display = ccEntries.length ? 'none' : 'block';
+  document.getElementById('cc-entries-table').style.display = ccEntries.length ? 'table' : 'none';
+}
+
+function addCCEntry() {
+  if (!ccCards.length) { alert('กรุณาเพิ่มบัตรเครดิตก่อน'); return; }
+  const amount = parseFloat(document.getElementById('cc-amount').value);
+  const desc = document.getElementById('cc-desc').value.trim();
+  const date = document.getElementById('cc-date').value;
+  const cardIdx = parseInt(document.getElementById('cc-select-card').value);
+  const cat = document.getElementById('cc-cat').value;
+  const billing = document.getElementById('cc-billing').value;
+  if (!amount || amount <= 0) { alert('กรุณาระบุจำนวนเงิน'); return; }
+  if (!date) { alert('กรุณาระบุวันที่'); return; }
+  ccEntries.push({ cardIdx, cat, desc, amount, date, billing, paid: false });
+  save(); renderCCCards();
+  document.getElementById('cc-amount').value = '';
+  document.getElementById('cc-desc').value = '';
+}
+
+function markPaid(i) { ccEntries[i].paid = true; save(); renderCCCards(); }
+function unmarkPaid(i) { ccEntries[i].paid = false; save(); renderCCCards(); }
+function delCC(i) { if (confirm('ต้องการลบรายการนี้?')) { ccEntries.splice(i,1); save(); renderCCCards(); } }
+
+function openAddCard() {
+  editCardIdx = -1;
+  selectedColor = CC_COLORS[0];
+  document.getElementById('modal-title').textContent = 'เพิ่มบัตรใหม่';
+  document.getElementById('m-name').value = '';
+  document.getElementById('m-limit').value = '';
+  document.getElementById('m-due').value = '';
+  buildColorPicker();
+  document.getElementById('card-modal').style.display = 'flex';
+}
+function closeModal() { document.getElementById('card-modal').style.display = 'none'; }
+function saveCard() {
+  const name = document.getElementById('m-name').value.trim();
+  const limit = parseFloat(document.getElementById('m-limit').value) || 0;
+  const due = parseInt(document.getElementById('m-due').value) || 25;
+  if (!name) { alert('กรุณาระบุชื่อบัตร'); return; }
+  const card = { name, limit, due, color: selectedColor };
+  if (editCardIdx >= 0) ccCards[editCardIdx] = card;
+  else ccCards.push(card);
+  save(); renderCCCards(); closeModal();
+}
+
+// Summary tab
+function renderSummary() {
+  const thMonths = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const monthMap = {};
+  entries.forEach(e => {
+    const m = e.date.slice(0,7);
+    if (!monthMap[m]) monthMap[m] = {in:0,out:0,cc:0};
+    if (e.type==='in') monthMap[m].in += Number(e.amount);
+    else monthMap[m].out += Number(e.amount);
+  });
+  ccEntries.forEach(e => {
+    const m = e.billing || e.date.slice(0,7);
+    if (!monthMap[m]) monthMap[m] = {in:0,out:0,cc:0};
+    monthMap[m].cc += Number(e.amount);
+  });
+  const months = Object.keys(monthMap).sort();
+  function mLabel(m) { const [y,mo]=m.split('-'); return thMonths[parseInt(mo)-1]+' '+(parseInt(y)+543); }
+
+  if (!months.length) {
+    document.getElementById('month-summary-wrap').innerHTML = '<div class="empty">ยังไม่มีข้อมูล</div>';
+    document.getElementById('cat-summary-wrap').innerHTML = '<div class="empty">ยังไม่มีข้อมูล</div>';
+    document.getElementById('chart-empty').style.display = 'block';
+    document.getElementById('monthChart').style.display = 'none';
+    if (chart) { chart.destroy(); chart = null; }
+    return;
+  }
+  document.getElementById('chart-empty').style.display = 'none';
+  document.getElementById('monthChart').style.display = 'block';
+
+  let html = '<table class="month-table"><thead><tr><th>เดือน</th><th style="text-align:right">รายรับ</th><th style="text-align:right">รายจ่าย</th><th style="text-align:right">บัตรเครดิต</th><th style="text-align:right">คงเหลือ</th></tr></thead><tbody>';
+  months.forEach(m => {
+    const d = monthMap[m]; const bal = d.in - d.out - d.cc;
+    html += `<tr><td>${mLabel(m)}</td>
+      <td style="text-align:right;color:var(--green)">${fmt(d.in)}</td>
+      <td style="text-align:right;color:var(--red)">${fmt(d.out)}</td>
+      <td style="text-align:right;color:var(--blue)">${fmt(d.cc)}</td>
+      <td style="text-align:right" class="${bal>=0?'balance-pos':'balance-neg'}">${bal>=0?'+':'−'}${fmt(Math.abs(bal))}</td></tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('month-summary-wrap').innerHTML = html;
+
+  const ctx = document.getElementById('monthChart').getContext('2d');
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: months.map(mLabel),
+      datasets: [
+        { label:'รายรับ', data:months.map(m=>monthMap[m].in), backgroundColor:'#5DCAA5', borderRadius:5 },
+        { label:'รายจ่าย', data:months.map(m=>monthMap[m].out), backgroundColor:'#F0997B', borderRadius:5 },
+        { label:'บัตรเครดิต', data:months.map(m=>monthMap[m].cc), backgroundColor:'#93C5FD', borderRadius:5 }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{autoSkip:false,font:{family:'Sarabun',size:12}}},
+        y:{ticks:{callback:v=>'฿'+v.toLocaleString(),font:{family:'Sarabun',size:12}}}
+      }
+    }
+  });
+
+  const catTotals = {};
+  entries.forEach(e => {
+    const k = e.type+'|'+e.cat;
+    if (!catTotals[k]) catTotals[k] = {type:e.type,cat:e.cat,total:0};
+    catTotals[k].total += Number(e.amount);
+  });
+  ccEntries.forEach(e => {
+    const k = 'cc|'+e.cat;
+    if (!catTotals[k]) catTotals[k] = {type:'cc',cat:e.cat,total:0};
+    catTotals[k].total += Number(e.amount);
+  });
+  const cats = Object.values(catTotals).sort((a,b)=>b.total-a.total);
+  let catHtml = '<table><thead><tr><th>หมวดหมู่</th><th style="text-align:right">ยอดรวม</th></tr></thead><tbody>';
+  cats.forEach(c => {
+    const cls = c.type==='in'?'badge-in':c.type==='cc'?'badge-cc':'badge-out';
+    const col = c.type==='in'?'var(--green)':c.type==='cc'?'var(--blue)':'var(--red)';
+    catHtml += `<tr><td><span class="badge ${cls}">${c.cat}</span></td><td style="text-align:right;font-weight:600;color:${col}">${fmt(c.total)}</td></tr>`;
+  });
+  catHtml += '</tbody></table>';
+  document.getElementById('cat-summary-wrap').innerHTML = catHtml;
+}
+
+function switchTab(t) {
+  ['record','credit','summary'].forEach(id => {
+    document.getElementById('tab-'+id).style.display = t===id ? 'block' : 'none';
+  });
+  document.querySelectorAll('.tab').forEach((el,i) => {
+    el.classList.toggle('active', ['record','credit','summary'][i]===t);
+  });
+  if (t==='summary') renderSummary();
+  if (t==='credit') renderCCCards();
+}
+
+// ===== SIDE PANEL =====
+const SIDE_CATS = [
+  'INSURANCE','VEHICLE INSURANCE','CAR MAINTENANCE','CONDO/HOME',
+  'OTHER+TRAVEL','ORYU','GUK','GUK for ORYU','INVESTMENT','RMF','แต๊ะเอีย'
+];
+
+let customNotes = JSON.parse(localStorage.getItem('fin_custom_notes') || '{}');
+let customLabels = JSON.parse(localStorage.getItem('fin_custom_labels') || '{}');
+let dashDynamicRows = JSON.parse(localStorage.getItem('fin_dash_dyn') || '[]');
+let spendDynamicRows = JSON.parse(localStorage.getItem('fin_spend_dyn') || '[]');
+
+function saveCustom() {
+  localStorage.setItem('fin_custom_notes', JSON.stringify(customNotes));
+  localStorage.setItem('fin_custom_labels', JSON.stringify(customLabels));
+  localStorage.setItem('fin_dash_dyn', JSON.stringify(dashDynamicRows));
+  localStorage.setItem('fin_spend_dyn', JSON.stringify(spendDynamicRows));
+}
+
+function toggleSidePanel() {
+  const body = document.getElementById('side-panel-body');
+  const arrow = document.getElementById('spend-arrow');
+  const isHidden = body.style.display === 'none';
+  body.style.display = isHidden ? 'block' : 'none';
+  arrow.textContent = isHidden ? '▼' : '▶';
+}
+
+function addSpendRow() {
+  spendDynamicRows.push({ label: '', amt: '', remark: '' });
+  saveCustom(); renderCustomTable();
+}
+function delSpendRow(i) {
+  spendDynamicRows.splice(i, 1);
+  saveCustom(); renderCustomTable();
+}
+
+function renderCustomTable() {
+  const tbody = document.getElementById('custom-tbody');
+  const totals = {};
+  entries.forEach(e => {
+    const sign = e.type === 'in' ? 1 : -1;
+    if (SIDE_CATS.includes(e.cat)) {
+      totals[e.cat] = (totals[e.cat] || 0) + sign * Number(e.amount);
+    }
+  });
+
+  let grandTotal = 0;
+  let rows = '';
+
+  SIDE_CATS.forEach((cat, i) => {
+    const val = totals[cat] || 0;
+    grandTotal += val;
+    const color = val > 0 ? 'var(--green)' : val < 0 ? 'var(--red)' : 'var(--text3)';
+    const display = val === 0 ? '—' : (val > 0 ? '+' : '−') + fmt(Math.abs(val));
+    const note = customNotes['cat_'+i] || '';
+    rows += `<tr>
+      <td style="white-space:nowrap;font-size:12px;color:var(--text2)">${cat}</td>
+      <td style="text-align:right;font-weight:600;color:${color};white-space:nowrap">${display}</td>
+      <td style="text-align:right"><input type="text" value="${note}" placeholder="Remark" style="width:100%;text-align:right;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:12px;background:var(--bg);color:var(--text)" onchange="customNotes['cat_${i}']=this.value;saveCustom()"></td>
+    </tr>`;
+  });
+
+  let dashVal = 0;
+  entries.forEach(e => {
+    if (e.cat === '-') dashVal += (e.type === 'in' ? 1 : -1) * Number(e.amount);
+  });
+    grandTotal += dashVal;
+  const dashColor = dashVal > 0 ? 'var(--green)' : dashVal < 0 ? 'var(--red)' : 'var(--text3)';
+  const dashDisplay = dashVal === 0 ? '—' : (dashVal > 0 ? '+' : '−') + fmt(Math.abs(dashVal));
+  rows += `<tr>
+    <td style="color:var(--text3);font-size:13px">-</td>
+    <td style="text-align:right;font-weight:600;color:${dashColor}">${dashDisplay}</td>
+    <td></td>
+  </tr>`;
+
+  spendDynamicRows.forEach((r, i) => {
+    const val = parseFloat(r.amt) || 0;
+    grandTotal += val;
+    rows += `<tr>
+      <td style="padding:5px 8px;border-bottom:0.5px solid var(--border)">
+        <input type="text" value="${r.label}" placeholder="Enter item..."
+          style="width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:12px;background:var(--bg);color:var(--text)"
+          onchange="spendDynamicRows[${i}].label=this.value;saveCustom()">
+      </td>
+      <td style="padding:5px 8px;border-bottom:0.5px solid var(--border)">
+        <input type="number" value="${r.amt}" placeholder="0.00" inputmode="decimal" step="0.01"
+          style="width:100%;text-align:right;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:12px;background:var(--bg);color:var(--text)"
+          onchange="spendDynamicRows[${i}].amt=this.value;saveCustom();renderCustomTable()">
+      </td>
+      <td style="padding:5px 8px;border-bottom:0.5px solid var(--border)">
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="text" value="${r.remark}" placeholder="Remark"
+            style="flex:1;width:100%;text-align:right;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:12px;background:var(--bg);color:var(--text)"
+            onchange="spendDynamicRows[${i}].remark=this.value;saveCustom()">
+          <button onclick="delSpendRow(${i})" class="del-btn" style="font-size:16px;padding:0 4px;flex-shrink:0">×</button>
+        </div>
+      </td>
+    </tr>`;
+  });
+
+  tbody.innerHTML = rows;
+
+  const totalEl = document.getElementById('custom-total');
+  totalEl.textContent = (grandTotal >= 0 ? '+' : '−') + fmt(Math.abs(grandTotal));
+  totalEl.style.color = grandTotal >= 0 ? 'var(--green)' : 'var(--red)';
+
+  const spendEl = document.getElementById('scb-spend');
+  spendEl.textContent = (grandTotal >= 0 ? '' : '−') + fmt(Math.abs(grandTotal));
+  spendEl.style.color = grandTotal >= 0 ? '#D97706' : 'var(--red)';
+
+  // === แก้ไขบัคบรรทัดนี้: ลบลูกน้ำและช่องว่างให้ถูกต้อง ก่อนแปลงเป็นตัวเลข ===
+  const getVal = id => {
+    const el = document.getElementById(id);
+    if (!el) return 0;
+    const txt = el.textContent.replace(/[฿+,\s]/g, '').replace('−', '-').trim();
+    return parseFloat(txt) || 0;
+  };
+  
+  // คำนวณผลรวม 4 ช่อง (Use, Remained, Credit Card, Spend)
+  const scbTotal = getVal('scb-use') + getVal('scb-remained') + getVal('scb-cc') + grandTotal;
+  const netEl = document.getElementById('scb-net');
+  netEl.textContent = (scbTotal >= 0 ? '+' : '−') + fmt(Math.abs(scbTotal));
+  netEl.style.color = scbTotal >= 0 ? 'var(--green)' : 'var(--red)';
+
+  if (typeof renderDashTable === 'function') renderDashTable(dashVal);
+}function toggleDashPanel() {
+  const body = document.getElementById('dash-panel-body');
+  const arrow = document.getElementById('dash-arrow');
+  const isHidden = body.style.display === 'none';
+  body.style.display = isHidden ? 'block' : 'none';
+  arrow.textContent = isHidden ? '▼' : '▶';
+}
+
+function saveDashInput(key) {
+  const el = document.getElementById('dash-input-'+key);
+  if (el) { customLabels['dash_amt_'+key] = el.value; saveCustom(); renderDashTable_standalone(); }
+}
+function saveDashRemark(key) {
+  const el = document.getElementById('dash-remark-'+key);
+  if (el) { customNotes['dash_remark_'+key] = el.value; saveCustom(); }
+}
+
+function addDashRow() {
+  dashDynamicRows.push({ label: '', amt: '', remark: '' });
+  saveCustom(); renderDashTable_standalone();
+}
+function delDashRow(i) {
+  dashDynamicRows.splice(i, 1);
+  saveCustom(); renderDashTable_standalone();
+}
+
+function renderDashTable_standalone() {
+  renderDashTable(parseFloat(customLabels['dash_spend_val']) || 0);
+}
+
+function inputCell(key) {
+  const val = customLabels['dash_amt_'+key] || '';
+  const displayVal = val !== '' ? parseFloat(val).toFixed(2) : '';
+  return `<input id="dash-input-${key}" type="number" value="${displayVal}" placeholder="0.00" inputmode="decimal" step="0.01"
+    style="width:100%;text-align:right;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:12px;background:var(--bg);color:var(--text);outline:none"
+    onchange="customLabels['dash_amt_${key}']=this.value;saveCustom();renderDashTable_standalone()"
+    onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">`;
+}
+function remarkCell(key) {
+  const val = customNotes['dash_remark_'+key] || '';
+  return `<input id="dash-remark-${key}" type="text" value="${val}" placeholder="Remark"
+    style="width:100%;text-align:right;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:12px;background:var(--bg);color:var(--text);outline:none"
+    onchange="saveDashRemark('${key}')" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">`;
+}
+
+function renderDashTable(dashVal) {
+  const tbody = document.getElementById('dash-tbody');
+  if (!tbody) return;
+
+  customLabels['dash_spend_val'] = dashVal;
+  const fixedRows = ['USE','Credit Card','Remained','Papa','Kohung'];
+
+  let sumBelow = 0;
+  fixedRows.forEach(k => { sumBelow += parseFloat(customLabels['dash_amt_'+k]) || 0; });
+  dashDynamicRows.forEach(r => { sumBelow += parseFloat(r.amt) || 0; });
+
+  const result = dashVal - sumBelow;
+  const resColor = result >= 0 ? 'var(--green)' : 'var(--red)';
+  const resText = (result >= 0 ? '+' : '−') + fmt(Math.abs(result));
+
+  const dashColor = dashVal > 0 ? 'var(--green)' : dashVal < 0 ? 'var(--red)' : 'var(--text3)';
+  const dashText = dashVal === 0 ? '—' : (dashVal > 0 ? '+' : '−') + fmt(Math.abs(dashVal));
+
+  const dashBg = 'background:var(--bg);';
+  const tdNormal = `style="padding:5px 8px;border-bottom:0.5px solid var(--border);font-size:13px"`;
+  const labelNormal = `style="padding:5px 8px;border-bottom:0.5px solid var(--border);font-size:12px;color:var(--text2);white-space:nowrap"`;
+
+  let rows = `
+    <tr style="${dashBg}">
+      <td style="padding:6px 8px;border-bottom:0.5px solid var(--border);font-size:13px;font-weight:700;color:var(--text)">-</td>
+      <td style="padding:6px 8px;border-bottom:0.5px solid var(--border);text-align:right;font-weight:700;font-size:14px;color:${dashColor}">${dashText}</td>
+      <td style="padding:6px 8px;border-bottom:0.5px solid var(--border)">${remarkCell('dash')}</td>
+    </tr>`;
+
+  fixedRows.forEach(k => {
+    rows += `<tr>
+      <td ${labelNormal}>${k}</td>
+      <td ${tdNormal}>${inputCell(k)}</td>
+      <td ${tdNormal}>${remarkCell(k)}</td>
+    </tr>`;
+  });
+
+  dashDynamicRows.forEach((r, i) => {
+    rows += `<tr>
+      <td style="padding:5px 8px;border-bottom:0.5px solid var(--border)">
+        <input type="text" value="${r.label}" placeholder="Enter item..."
+          style="width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:12px;background:var(--bg);color:var(--text)"
+          onchange="dashDynamicRows[${i}].label=this.value;saveCustom()">
+      </td>
+      <td ${tdNormal}>
+        <input type="number" value="${r.amt}" placeholder="0.00" inputmode="decimal" step="0.01"
+          style="width:100%;text-align:right;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:12px;background:var(--bg);color:var(--text)"
+          onchange="dashDynamicRows[${i}].amt=this.value;saveCustom();renderDashTable_standalone()">
+      </td>
+      <td ${tdNormal}>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="text" value="${r.remark}" placeholder="Remark"
+            style="flex:1;width:100%;text-align:right;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:12px;background:var(--bg);color:var(--text)"
+            onchange="dashDynamicRows[${i}].remark=this.value;saveCustom()">
+          <button onclick="delDashRow(${i})" class="del-btn" style="font-size:16px;padding:0 4px;flex-shrink:0">×</button>
+        </div>
+      </td>
+    </tr>`;
+  });
+
+  rows += `<tr style="border-top:1.5px solid var(--border)">
+    <td style="padding:7px 8px;font-weight:600;font-size:13px;color:var(--text2)">Remaining</td>
+    <td style="padding:7px 8px;text-align:right;font-weight:700;font-size:14px;color:${resColor}">${resText}</td>
+    <td style="padding:7px 8px"></td>
+  </tr>`;
+
+  tbody.innerHTML = rows;
+}
+
+// ===== CREDIT CARD DUE DATE PANEL =====
+let dueRows = JSON.parse(localStorage.getItem('fin_due_rows') || '[]');
+
+function saveDue() { localStorage.setItem('fin_due_rows', JSON.stringify(dueRows)); }
+
+function toggleDuePanel() {
+  const body = document.getElementById('due-panel-body');
+  const arrow = document.getElementById('due-arrow');
+  const hidden = body.style.display === 'none';
+  body.style.display = hidden ? 'block' : 'none';
+  arrow.textContent = hidden ? '▼' : '▶';
+}
+
+function addDueRow() {
+  dueRows.push({ date: '', cardIdx: '', amount: '' });
+  saveDue(); renderDueTable();
+}
+
+function delDueRow(i) {
+  dueRows.splice(i, 1); saveDue(); renderDueTable();
+}
+
+function renderDueTable() {
+  const tbody = document.getElementById('due-tbody');
+  if (!tbody) return;
+  const inp = (type, val, ph, key, i, extra='') =>
+    `<input type="${type}" value="${val}" placeholder="${ph}" ${extra}
+      style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:13px;background:var(--bg);color:var(--text);outline:none;${type==='number'?'text-align:right':''}"
+      onchange="dueRows[${i}]['${key}']=this.value;saveDue()"
+      onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">`;
+
+  if (!dueRows.length) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:1.5rem;font-size:13px">No items — Click "+ Add Item"</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = dueRows.map((r, i) => {
+    const selCard = `<select style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:13px;background:var(--bg);color:var(--text)"
+      onchange="dueRows[${i}].cardIdx=this.value;saveDue()">
+      <option value="">Select Card</option>${ccCards.map((c,ci) =>
+        `<option value="${ci}"${String(r.cardIdx)===String(ci)?' selected':''}>${c.name}</option>`).join('')}
+    </select>`;
+    return `<tr>
+      <td style="padding:5px 8px;border-bottom:0.5px solid var(--border)">
+        ${inp('date', r.date, '', 'date', i, 'style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:13px;background:var(--bg);color:var(--text)"')}
+      </td>
+      <td style="padding:5px 8px;border-bottom:0.5px solid var(--border);min-width:140px">${selCard}</td>
+      <td style="padding:5px 8px;border-bottom:0.5px solid var(--border)">
+        ${inp('number', r.amount, '0.00', 'amount', i, 'step="0.01" inputmode="decimal"')}
+      </td>
+      <td style="padding:5px 8px;border-bottom:0.5px solid var(--border);text-align:center">
+        <button onclick="delDueRow(${i})" class="del-btn" style="font-size:16px">×</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// โหลดข้อมูลตัวกรองหมวดหมู่ตอนเริ่มต้น
+initFilters();
+render();
+renderCCCards();
+renderCustomTable();
+renderDueTable();
+</script>
+</body>
+</html>
