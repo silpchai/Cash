@@ -115,6 +115,7 @@
   <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h10M7 12h6"/></svg>
   <h1>Finance Tracker</h1>
   <span id="header-date"></span>
+  <span id="sync-indicator" style="font-size:12px;color:var(--text3);margin-left:8px;transition:opacity 1s"></span>
 </header>
 
 <div class="container">
@@ -165,23 +166,6 @@
       </div>
       <button class="add-btn" onclick="addEntry()">Add Transaction</button>
       <button class="add-btn" style="background:var(--blue); margin-top: 10px;" onclick="syncToSheets()">☁️ Sync to Google Sheets</button>
-
-      <script>
-      function syncToSheets() {
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxTRYf1CoO_gNOqyuj_-F_0HANJCs04MHRTx9GJQG6ZwaxWZ3UBQbSUuUIXdJIhWXR0Vw/exec';
-  
-        if(!confirm('Are you sure you want to sync all data to Google Sheets?')) return;
-  
-        fetch(SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors', // ป้องกันปัญหา CORS
-          cache: 'no-cache',
-          body: JSON.stringify(entries)
-        })
-        .then(() => alert('Sync success!'))
-        .catch(err => alert('Sync failed: ' + err));
-      }
-      </script>
     </div>
 
     <div class="panel" style="padding:0;overflow:hidden">
@@ -305,8 +289,11 @@
       <div class="form-grid">
         <div class="field"><label>บัตร</label><select id="cc-select-card"></select></div>
         <div class="field"><label>หมวดหมู่</label><select id="cc-cat">
-          <option>อาหาร</option><option>ช้อปปิ้ง</option><option>ค่าเดินทาง</option>
-          <option>สุขภาพ</option><option>บันเทิง</option><option>สาธารณูปโภค</option><option>อื่นๆ</option>
+          <option>-</option><option>USE</option><option>REMAINED</option><option>CREDIT CARD</option>
+          <option>INSURANCE</option><option>VEHICLE INSURANCE</option><option>CAR MAINTENANCE</option>
+          <option>CONDO/HOME</option><option>OTHER+TRAVEL</option><option>ORYU</option>
+          <option>GUK</option><option>GUK for ORYU</option><option>INVESTMENT</option>
+          <option>RMF</option><option>แต๊ะเอีย</option>
         </select></div>
         <div class="field"><label>รายการ</label><input type="text" id="cc-desc" placeholder="เช่น ซื้อของ Lazada"></div>
         <div class="field"><label>จำนวนเงิน (฿)</label><input type="number" id="cc-amount" placeholder="0" min="0" inputmode="decimal"></div>
@@ -314,14 +301,47 @@
         <div class="field"><label>รอบบิล</label><input type="month" id="cc-billing"></div>
       </div>
       <button class="add-btn blue" onclick="addCCEntry()">+ บันทึกรายการบัตรเครดิต</button>
-      <div style="height:1rem"></div>
+
+      <div style="background:var(--bg);padding:12px;border-radius:var(--radius-sm);margin:12px 0 8px;border:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Filters</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px">
+          <select id="cc-filter-card" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:13px;background:#fff" onchange="renderCCEntries()">
+            <option value="">ทุกบัตร</option>
+          </select>
+          <select id="cc-filter-status" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:13px;background:#fff" onchange="renderCCEntries()">
+            <option value="">ทุกสถานะ</option><option value="unpaid">ค้างชำระ</option><option value="paid">ชำระแล้ว</option>
+          </select>
+          <input type="text" id="cc-search" placeholder="🔍 Search description..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:13px;outline:none" oninput="renderCCEntries()">
+        </div>
+      </div>
+
       <div id="cc-empty-msg" class="empty">ยังไม่มีรายการ — เพิ่มบัตรแล้วเริ่มบันทึกได้เลย</div>
       <table id="cc-entries-table" style="display:none">
         <thead><tr><th>วันที่</th><th>บัตร</th><th>หมวดหมู่</th><th>รายการ</th><th style="text-align:right">จำนวน</th><th>สถานะ</th><th></th></tr></thead>
         <tbody id="cc-entries-body"></tbody>
       </table>
     </div>
-  </div>
+
+    <!-- CC Due Date (collapsible) -->
+    <div class="panel" style="padding:0;overflow:hidden">
+      <button class="side-toggle" onclick="toggleCCDuePanel()" style="border-radius:var(--radius);border:none;margin:0;padding:1rem 1.25rem">
+        <span class="arrow" id="cc-due-arrow">▼</span>
+        <span class="side-toggle-label" style="font-size:14px;font-weight:600;color:var(--text)">📅 Credit Card Payment Due Date</span>
+      </button>
+      <div id="cc-due-panel-body" style="padding:0 1.25rem 1.25rem">
+        <div style="overflow-x:auto">
+          <table style="min-width:380px">
+            <thead><tr>
+              <th>Due Date</th><th>Credit Card</th>
+              <th style="text-align:right">Amount (฿)</th><th></th>
+            </tr></thead>
+            <tbody id="cc-due-tbody"></tbody>
+          </table>
+        </div>
+        <button onclick="addDueRow()" style="margin-top:10px;padding:7px 16px;border:1.5px dashed var(--border);border-radius:var(--radius-sm);background:transparent;font-family:inherit;font-size:13px;color:var(--text2);cursor:pointer;width:100%">+ Add Item</button>
+      </div>
+    </div>
+  </div><!-- end tab-credit -->
 
   <div id="tab-summary" style="display:none">
     <div class="panel">
@@ -630,35 +650,6 @@ function cancelEdit(i) {
 }
 
 // ===== CREDIT CARD =====
-function renderCCCards() {
-  const grid = document.getElementById('cc-cards-grid');
-  const sel = document.getElementById('cc-select-card');
-
-  sel.innerHTML = ccCards.length ? ccCards.map((c,i)=>`<option value="${i}">${c.name}</option>`).join('') : '<option value="">— No cards available —</option>';
-
-  if (!ccCards.length) { grid.innerHTML = ''; renderCCSummary(); return; }
-
-  grid.innerHTML = ccCards.map((c,i) => {
-    const used = ccEntries.filter(e=>e.cardIdx===i&&!e.paid).reduce((s,e)=>s+Number(e.amount),0);
-    const pct = c.limit ? Math.min(100, Math.round(used/c.limit*100)) : 0;
-    return `<div class="cc-card-visual" style="background:${c.color}" onclick="selectCardView(${i})">
-      <div>
-        <div class="cc-card-name">${c.name}</div>
-        <div class="cc-card-limit">วงเงิน ${fmt(c.limit)}</div>
-      </div>
-      <div>
-        <div class="cc-card-used">${fmt(used)}</div>
-        <div class="cc-card-due">ครบกำหนดชำระวันที่ ${c.due} ของเดือน</div>
-        <div class="cc-bar"><div class="cc-bar-fill" style="width:${pct}%"></div></div>
-      </div>
-    </div>`;
-  }).join('');
-
-  renderCCSummary();
-  renderCCEntries();
-  if (typeof renderDueTable === 'function') renderDueTable();
-}
-
 function renderCCSummary() {
   let totalUsed=0, totalPaid=0, totalAvail=0;
   ccCards.forEach((c,i) => {
@@ -671,35 +662,6 @@ function renderCCSummary() {
   document.getElementById('cc-total-used').textContent = fmt(totalUsed);
   document.getElementById('cc-total-paid').textContent = fmt(totalPaid);
   document.getElementById('cc-total-avail').textContent = fmt(totalAvail);
-}
-
-function renderCCEntries() {
-  const body = document.getElementById('cc-entries-body');
-  body.innerHTML = '';
-  const sorted = [...ccEntries].sort((a,b) => b.date.localeCompare(a.date));
-  sorted.forEach(e => {
-    const idx = ccEntries.indexOf(e);
-    const card = ccCards[e.cardIdx];
-    const cardName = card ? card.name : '(ลบแล้ว)';
-    
-    // แปลงวันที่สำหรับตารางบัตรเครดิตเช่นกัน
-    const displayDate = formatShortDate(e.date);
-
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${displayDate}</td>
-      <td><span class="badge badge-cc">${cardName}</span></td>
-      <td><span class="badge badge-out">${e.cat}</span></td>
-      <td style="color:var(--text2)">${e.desc||'—'}</td>
-      <td style="text-align:right;font-weight:600;color:var(--blue)">−${fmt(e.amount)}</td>
-      <td><span class="badge ${e.paid?'badge-paid':'badge-unpaid'}">${e.paid?'ชำระแล้ว':'ค้างชำระ'}</span></td>
-      <td style="display:flex;gap:4px;align-items:center">
-        ${!e.paid?`<button class="pay-btn" onclick="markPaid(${idx})">✓ ชำระ</button>`:`<button class="pay-btn paid-btn" onclick="unmarkPaid(${idx})">ยกเลิก</button>`}
-        <button class="del-btn" onclick="delCC(${idx})">×</button>
-      </td>`;
-    body.appendChild(tr);
-  });
-  document.getElementById('cc-empty-msg').style.display = ccEntries.length ? 'none' : 'block';
-  document.getElementById('cc-entries-table').style.display = ccEntries.length ? 'table' : 'none';
 }
 
 function addCCEntry() {
@@ -1100,47 +1062,199 @@ function delDueRow(i) {
   dueRows.splice(i, 1); saveDue(); renderDueTable();
 }
 
+function selectCardView(i) { /* reserved */ }
+
+function syncToSheets() {
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx0R4Nr-CfKrjIhr8rvalH4hikMj3IHqAf_iuXie-TFl9g7ASXW_thTUAeGBcWoZ-TSCQ/exec';
+  if(!confirm('Sync ข้อมูลทั้งหมดขึ้น Google Sheets?')) return;
+
+  const payload = {
+    action: 'save',
+    entries, ccCards, ccEntries,
+    customNotes, customLabels,
+    dashDynamicRows, spendDynamicRows, dueRows
+  };
+
+  const btn = document.querySelector('button[onclick="syncToSheets()"]');
+  if(btn){ btn.textContent = '⏳ Syncing...'; btn.disabled = true; }
+
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    cache: 'no-cache',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(payload)
+  })
+  .then(() => {
+    if(btn){ btn.textContent = '✅ Synced!'; setTimeout(()=>{ btn.textContent='☁️ Sync to Google Sheets'; btn.disabled=false; }, 2000); }
+    alert('Sync สำเร็จ!');
+  })
+  .catch(err => {
+    if(btn){ btn.textContent='☁️ Sync to Google Sheets'; btn.disabled=false; }
+    alert('Sync ไม่สำเร็จ: ' + err);
+  });
+}
+
+function loadFromSheets() {
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx0R4Nr-CfKrjIhr8rvalH4hikMj3IHqAf_iuXie-TFl9g7ASXW_thTUAeGBcWoZ-TSCQ/exec';
+
+  const indicator = document.getElementById('sync-indicator');
+  if(indicator) { indicator.style.display='flex'; indicator.textContent='⏳ Loading from Sheets...'; }
+
+  fetch(SCRIPT_URL + '?action=load', { method:'GET', cache:'no-cache' })
+  .then(res => res.json())
+  .then(data => {
+    if(!data || data.error) { console.warn('Sheets load skipped:', data?.error); showSyncStatus('local'); return; }
+
+    if(data.entries)           entries           = data.entries;
+    if(data.ccCards)           ccCards           = data.ccCards;
+    if(data.ccEntries)         ccEntries         = data.ccEntries;
+    if(data.customNotes)       customNotes       = data.customNotes;
+    if(data.customLabels)      customLabels      = data.customLabels;
+    if(data.dashDynamicRows)   dashDynamicRows   = data.dashDynamicRows;
+    if(data.spendDynamicRows)  spendDynamicRows  = data.spendDynamicRows;
+    if(data.dueRows)           dueRows           = data.dueRows;
+
+    // save to localStorage as cache
+    save(); saveCustom(); saveDue();
+
+    // re-render everything
+    initFilters(); render(); renderCCCards(); renderCustomTable(); renderDueTable();
+    showSyncStatus('sheets', data.savedAt);
+  })
+  .catch(err => {
+    console.warn('Could not load from Sheets, using local data:', err);
+    showSyncStatus('local');
+  });
+}
+
+function showSyncStatus(source, savedAt) {
+  const indicator = document.getElementById('sync-indicator');
+  if(!indicator) return;
+  if(source === 'sheets') {
+    const ts = savedAt ? new Date(savedAt).toLocaleString('th-TH') : '';
+    indicator.textContent = '✅ โหลดจาก Sheets' + (ts ? ' · บันทึกล่าสุด ' + ts : '');
+    indicator.style.color = 'var(--green)';
+  } else {
+    indicator.textContent = '💾 ใช้ข้อมูล Local';
+    indicator.style.color = 'var(--text3)';
+  }
+  setTimeout(()=>{ indicator.style.opacity='0'; }, 5000);
+}
+
+function toggleCCDuePanel() {
+  const body = document.getElementById('cc-due-panel-body');
+  const arrow = document.getElementById('cc-due-arrow');
+  const hidden = body.style.display === 'none';
+  body.style.display = hidden ? 'block' : 'none';
+  arrow.textContent = hidden ? '▼' : '▶';
+}
+
+// renderCCCards — merged: original + cc-filter-card dropdown update
+function renderCCCards() {
+  const grid = document.getElementById('cc-cards-grid');
+  const sel = document.getElementById('cc-select-card');
+  sel.innerHTML = ccCards.length ? ccCards.map((c,i)=>`<option value="${i}">${c.name}</option>`).join('') : '<option value="">— No cards available —</option>';
+  if (!ccCards.length) { grid.innerHTML = ''; renderCCSummary(); return; }
+  grid.innerHTML = ccCards.map((c,i) => {
+    const used = ccEntries.filter(e=>e.cardIdx===i&&!e.paid).reduce((s,e)=>s+Number(e.amount),0);
+    const pct = c.limit ? Math.min(100, Math.round(used/c.limit*100)) : 0;
+    return `<div class="cc-card-visual" style="background:${c.color}">
+      <div><div class="cc-card-name">${c.name}</div><div class="cc-card-limit">วงเงิน ${fmt(c.limit)}</div></div>
+      <div>
+        <div class="cc-card-used">${fmt(used)}</div>
+        <div class="cc-card-due">ครบกำหนดชำระวันที่ ${c.due} ของเดือน</div>
+        <div class="cc-bar"><div class="cc-bar-fill" style="width:${pct}%"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+  renderCCSummary();
+  renderCCEntries();
+  // update cc filter card dropdown
+  const fsel = document.getElementById('cc-filter-card');
+  if(fsel) fsel.innerHTML = '<option value="">ทุกบัตร</option>' + ccCards.map((c,i)=>`<option value="${i}">${c.name}</option>`).join('');
+  renderDueTable();
+}
+
+// renderCCEntries — merged: original + filters support
+function renderCCEntries() {
+  const fCard   = (document.getElementById('cc-filter-card')||{}).value || '';
+  const fStatus = (document.getElementById('cc-filter-status')||{}).value || '';
+  const fSearch = ((document.getElementById('cc-search')||{}).value || '').toLowerCase();
+  const body = document.getElementById('cc-entries-body'); if(!body) return;
+  body.innerHTML = '';
+  const sorted = [...ccEntries].sort((a,b)=>b.date.localeCompare(a.date));
+  let count = 0;
+  sorted.forEach(e => {
+    const idx = ccEntries.indexOf(e);
+    if(fCard && String(e.cardIdx) !== fCard) return;
+    if(fStatus === 'paid' && !e.paid) return;
+    if(fStatus === 'unpaid' && e.paid) return;
+    if(fSearch && !(e.cat.toLowerCase().includes(fSearch)||(e.desc||'').toLowerCase().includes(fSearch))) return;
+    count++;
+    const card = ccCards[e.cardIdx];
+    const displayDate = formatShortDate(e.date);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${displayDate}</td>
+      <td><span class="badge badge-cc">${card?card.name:'—'}</span></td>
+      <td><span class="badge badge-out">${e.cat}</span></td>
+      <td style="color:var(--text2)">${e.desc||'—'}</td>
+      <td style="text-align:right;font-weight:600;color:var(--blue)">−${fmt(e.amount)}</td>
+      <td><span class="badge ${e.paid?'badge-paid':'badge-unpaid'}">${e.paid?'ชำระแล้ว':'ค้างชำระ'}</span></td>
+      <td style="display:flex;gap:4px;align-items:center">
+        ${!e.paid?`<button class="pay-btn" onclick="markPaid(${idx})">✓ ชำระ</button>`:`<button class="pay-btn paid-btn" onclick="unmarkPaid(${idx})">ยกเลิก</button>`}
+        <button class="del-btn" onclick="delCC(${idx})">×</button>
+      </td>`;
+    body.appendChild(tr);
+  });
+  document.getElementById('cc-empty-msg').style.display = count ? 'none' : 'block';
+  document.getElementById('cc-entries-table').style.display = count ? 'table' : 'none';
+}
+
+// renderDueTable — merged: original + mirror to cc-due-tbody
 function renderDueTable() {
-  const tbody = document.getElementById('due-tbody');
-  if (!tbody) return;
+  const tbody = document.getElementById('due-tbody'); if(!tbody) return;
   const inp = (type, val, ph, key, i, extra='') =>
     `<input type="${type}" value="${val}" placeholder="${ph}" ${extra}
       style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:13px;background:var(--bg);color:var(--text);outline:none;${type==='number'?'text-align:right':''}"
       onchange="dueRows[${i}]['${key}']=this.value;saveDue()"
       onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">`;
-
   if (!dueRows.length) {
     tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:1.5rem;font-size:13px">No items — Click "+ Add Item"</td></tr>`;
-    return;
+  } else {
+    tbody.innerHTML = dueRows.map((r, i) => {
+      const selCard = `<select style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:13px;background:var(--bg);color:var(--text)"
+        onchange="dueRows[${i}].cardIdx=this.value;saveDue()">
+        <option value="">Select Card</option>${ccCards.map((c,ci) =>
+          `<option value="${ci}"${String(r.cardIdx)===String(ci)?' selected':''}>${c.name}</option>`).join('')}
+      </select>`;
+      return `<tr>
+        <td style="padding:5px 8px;border-bottom:0.5px solid var(--border)">
+          ${inp('date', r.date, '', 'date', i, 'style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:13px;background:var(--bg);color:var(--text)"')}
+        </td>
+        <td style="padding:5px 8px;border-bottom:0.5px solid var(--border);min-width:140px">${selCard}</td>
+        <td style="padding:5px 8px;border-bottom:0.5px solid var(--border)">
+          ${inp('number', r.amount, '0.00', 'amount', i, 'step="0.01" inputmode="decimal"')}
+        </td>
+        <td style="padding:5px 8px;border-bottom:0.5px solid var(--border);text-align:center">
+          <button onclick="delDueRow(${i})" class="del-btn" style="font-size:16px">×</button>
+        </td>
+      </tr>`;
+    }).join('');
   }
-
-  tbody.innerHTML = dueRows.map((r, i) => {
-    const selCard = `<select style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:13px;background:var(--bg);color:var(--text)"
-      onchange="dueRows[${i}].cardIdx=this.value;saveDue()">
-      <option value="">Select Card</option>${ccCards.map((c,ci) =>
-        `<option value="${ci}"${String(r.cardIdx)===String(ci)?' selected':''}>${c.name}</option>`).join('')}
-    </select>`;
-    return `<tr>
-      <td style="padding:5px 8px;border-bottom:0.5px solid var(--border)">
-        ${inp('date', r.date, '', 'date', i, 'style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:13px;background:var(--bg);color:var(--text)"')}
-      </td>
-      <td style="padding:5px 8px;border-bottom:0.5px solid var(--border);min-width:140px">${selCard}</td>
-      <td style="padding:5px 8px;border-bottom:0.5px solid var(--border)">
-        ${inp('number', r.amount, '0.00', 'amount', i, 'step="0.01" inputmode="decimal"')}
-      </td>
-      <td style="padding:5px 8px;border-bottom:0.5px solid var(--border);text-align:center">
-        <button onclick="delDueRow(${i})" class="del-btn" style="font-size:16px">×</button>
-      </td>
-    </tr>`;
-  }).join('');
+  // mirror to cc-due-tbody
+  const dst = document.getElementById('cc-due-tbody');
+  if(dst) dst.innerHTML = tbody.innerHTML;
 }
 
-// โหลดข้อมูลตัวกรองหมวดหมู่ตอนเริ่มต้น
+
 initFilters();
 render();
 renderCCCards();
 renderCustomTable();
 renderDueTable();
+// โหลดจาก Google Sheets อัตโนมัติ (ถ้ามี internet)
+loadFromSheets();
 </script>
 </body>
 </html>
